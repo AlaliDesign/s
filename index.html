@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مصحف النخبة - التصميم الذكي</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+
+        :root {
+            --primary: #1a3c34;
+            --primary-light: #2a554a;
+            --gold: #b38b4d;
+            --bg: #f4f7f6;
+            --white: #ffffff;
+            --blue-edit: #3498db;
+            --red-del: #e74c3c;
+        }
+
+        body { font-family: 'Tajawal', sans-serif; background-color: var(--bg); margin: 0; padding: 20px; direction: rtl; }
+        .container { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr; gap: 25px; }
+
+        /* الجوانب */
+        .sidebar { display: flex; flex-direction: column; gap: 20px; }
+        .card-admin { background: var(--primary); color: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h6 { margin: 0 0 15px; font-size: 16px; color: var(--gold); border-bottom: 1px solid var(--primary-light); padding-bottom: 8px; }
+
+        input, select {
+            width: 100%; padding: 10px; margin-bottom: 12px; border-radius: 8px; border: 1px solid var(--primary-light);
+            background: var(--primary-light); color: white; outline: none; box-sizing: border-box;
+        }
+
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-save { background: var(--gold); color: white; }
+        .btn-update { background: var(--blue-edit); color: white; display: none; }
+
+        /* القائمة العلوية */
+        .readers-bar { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px; }
+        .reader-node { text-align: center; cursor: pointer; min-width: 80px; }
+        .reader-node img { width: 65px; height: 65px; border-radius: 50%; border: 3px solid white; object-fit: cover; }
+        
+        /* منطقة العرض */
+        .main-view { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+        .player-header { background: var(--primary); border-radius: 12px; padding: 20px; color: white; text-align: center; }
+        .player-header img { width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--gold); margin-bottom: 10px; }
+        
+        audio { width: 100%; margin-top: 15px; filter: invert(100%); }
+
+        /* لوحة التحكم الموحدة بالسورة */
+        .action-control { 
+            display: flex; justify-content: space-between; align-items: center;
+            background: #f8f9fa; padding: 10px 20px; border-radius: 10px; margin: 15px 0;
+            border: 1px dashed var(--gold); visibility: hidden; /* تظهر فقط عند اختيار سورة */
+        }
+        .action-control.active { visibility: visible; }
+        .control-btns { display: flex; gap: 10px; }
+        .mini-btn { padding: 5px 15px; border-radius: 5px; font-size: 13px; cursor: pointer; border: 1px solid; }
+        .edit-m { color: var(--blue-edit); border-color: var(--blue-edit); }
+        .del-m { color: var(--red-del); border-color: var(--red-del); }
+
+        /* جدول السور */
+        .surah-list { list-style: none; padding: 0; margin: 0; }
+        .surah-item { 
+            display: flex; justify-content: space-between; padding: 15px; 
+            border-bottom: 1px solid #eee; cursor: pointer; transition: 0.2s;
+        }
+        .surah-item:hover { background: #fffcf5; }
+        .surah-item.selected { background: #eef7f4; border-right: 4px solid var(--gold); }
+        .surah-name { font-weight: 500; display: flex; align-items: center; gap: 10px; }
+        .play-icon { color: var(--gold); font-size: 18px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="sidebar">
+        <div class="card-admin">
+            <h6>👤 إضافة قارئ</h6>
+            <input type="text" id="rName" placeholder="اسم الشيخ">
+            <input type="text" id="rImg" placeholder="رابط الصورة">
+            <button class="btn-save" onclick="addReader()">حفظ القارئ</button>
+        </div>
+
+        <div class="card-admin">
+            <h6 id="formLabel">📖 إضافة سورة</h6>
+            <select id="rSelect"><option value="">اختر الشيخ</option></select>
+            <select id="sNameSelect"></select>
+            <input type="text" id="sUrlInput" placeholder="رابط MP3">
+            <button id="btnS" class="btn-save" onclick="addSurah()">إضافة السورة</button>
+            <button id="btnU" class="btn-update" onclick="updateSurah()">تحديث البيانات</button>
+            <button id="btnC" style="display:none; margin-top:5px; background:transparent; color:#aaa;" onclick="resetForm()">إلغاء التعديل</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="readers-bar" id="readersList"></div>
+        
+        <div id="displayArea" class="main-view" style="display:none;">
+            <div class="player-header">
+                <img id="vImg" src="">
+                <h3 id="vName" style="margin:5px 0;"></h3>
+                <small id="playingNow">اختر سورة للاستماع</small>
+                <audio id="mainAudio" controls></audio>
+            </div>
+
+            <div id="actionControl" class="action-control">
+                <span id="selectedSurahName" style="font-weight: bold; color: var(--primary);"></span>
+                <div class="control-btns">
+                    <span class="mini-btn edit-m" onclick="handleEdit()">تعديل السورة</span>
+                    <span class="mini-btn del-m" onclick="handleDelete()">حذف</span>
+                </div>
+            </div>
+
+            <div class="surah-list" id="surahBody"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const STORAGE_KEY = "QURAN_APP_SMART_V3";
+    const surahs = ["الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة", "يونس", "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه", "الأنبياء", "الحج", "المؤمنون", "النور", "الفرقان", "الشعراء", "النمل", "القصص", "العنكبوت", "الروم", "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر", "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق", "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر", "الممتحنة", "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم", "الحاقة", "المعارج", "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات", "النبأ", "النازعات", "عبس", "التكوير", "الانفطار", "المطففين", "الانشقاق", "البروج", "الطارق", "الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق", "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل", "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس"];
+
+    let db = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    let currentReaderId = null;
+    let selectedSurahObj = null; // لتخزين السورة المختارة حالياً
+
+    function init() {
+        const sel = document.getElementById('sNameSelect');
+        surahs.forEach(s => { let o = new Option(s, s); sel.add(o); });
+        renderReaders();
+    }
+
+    function addReader() {
+        const n = document.getElementById('rName').value;
+        if(!n) return;
+        db.push({ id: Date.now(), name: n, img: document.getElementById('rImg').value, surahs: [] });
+        save();
+        document.getElementById('rName').value = ''; document.getElementById('rImg').value = '';
+    }
+
+    function renderReaders() {
+        const container = document.getElementById('readersList');
+        const select = document.getElementById('rSelect');
+        container.innerHTML = ''; select.innerHTML = '<option value="">اختر الشيخ</option>';
+        db.forEach(r => {
+            container.innerHTML += `<div class="reader-node" onclick="viewReader(${r.id})"><img src="${r.img || 'https://via.placeholder.com/65'}"><div>${r.name}</div></div>`;
+            select.add(new Option(r.name, r.id));
+        });
+    }
+
+    function viewReader(id) {
+        currentReaderId = id;
+        selectedSurahObj = null;
+        document.getElementById('actionControl').classList.remove('active');
+        const reader = db.find(x => x.id === id);
+        document.getElementById('displayArea').style.display = 'block';
+        document.getElementById('vName').innerText = reader.name;
+        document.getElementById('vImg').src = reader.img || 'https://via.placeholder.com/80';
+        renderSurahs(reader);
+    }
+
+    function renderSurahs(reader) {
+        const list = document.getElementById('surahBody');
+        list.innerHTML = '';
+        reader.surahs.forEach(s => {
+            const item = document.createElement('div');
+            item.className = 'surah-item';
+            item.innerHTML = `<div class="surah-name"><span class="play-icon">▶</span> ${s.title}</div>`;
+            item.onclick = () => selectSurah(s, item);
+            list.appendChild(item);
+        });
+    }
+
+    function selectSurah(surah, element) {
+        // تمييز السورة المختارة بصرياً
+        document.querySelectorAll('.surah-item').forEach(el => el.classList.remove('selected'));
+        element.classList.add('selected');
+
+        // تحديث كائن السورة المختارة
+        selectedSurahObj = surah;
+
+        // إظهار لوحة التحكم الموحدة
+        document.getElementById('actionControl').classList.add('active');
+        document.getElementById('selectedSurahName').innerText = "تم تحديد: " + surah.title;
+
+        // تشغيل الصوت تلقائياً عند الاختيار
+        playAudio(surah.url, surah.title);
+    }
+
+    function playAudio(url, title) {
+        const a = document.getElementById('mainAudio');
+        a.src = url; a.play();
+        document.getElementById('playingNow').innerText = "جاري تشغيل: " + title;
+    }
+
+    // وظائف لوحة التحكم الموحدة
+    function handleEdit() {
+        if(!selectedSurahObj) return;
+        document.getElementById('rSelect').value = currentReaderId;
+        document.getElementById('sNameSelect').value = selectedSurahObj.title;
+        document.getElementById('sUrlInput').value = selectedSurahObj.url;
+        
+        document.getElementById('formLabel').innerText = "📝 تعديل " + selectedSurahObj.title;
+        document.getElementById('btnS').style.display = 'none';
+        document.getElementById('btnU').style.display = 'block';
+        document.getElementById('btnC').style.display = 'block';
+    }
+
+    function handleDelete() {
+        if(!selectedSurahObj || !confirm("هل تريد حذف سورة " + selectedSurahObj.title + "؟")) return;
+        const reader = db.find(x => x.id === currentReaderId);
+        reader.surahs = reader.surahs.filter(s => s.id !== selectedSurahObj.id);
+        save();
+        viewReader(currentReaderId);
+    }
+
+    function updateSurah() {
+        const reader = db.find(x => x.id == currentReaderId);
+        const surah = reader.surahs.find(x => x.id == selectedSurahObj.id);
+        surah.title = document.getElementById('sNameSelect').value;
+        surah.url = document.getElementById('sUrlInput').value;
+        save();
+        viewReader(currentReaderId);
+        resetForm();
+    }
+
+    function addSurah() {
+        const rId = document.getElementById('rSelect').value;
+        const sU = document.getElementById('sUrlInput').value;
+        if(!rId || !sU) return alert("أكمل البيانات");
+        const reader = db.find(x => x.id == rId);
+        reader.surahs.push({ id: Date.now(), title: document.getElementById('sNameSelect').value, url: sU });
+        save();
+        if(currentReaderId == rId) viewReader(currentReaderId);
+        document.getElementById('sUrlInput').value = '';
+    }
+
+    function resetForm() {
+        document.getElementById('formLabel').innerText = "📖 إضافة سورة";
+        document.getElementById('btnS').style.display = 'block';
+        document.getElementById('btnU').style.display = 'none';
+        document.getElementById('btnC').style.display = 'none';
+        document.getElementById('sUrlInput').value = '';
+    }
+
+    function save() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+        renderReaders();
+    }
+
+    init();
+</script>
+</body>
+</html>
